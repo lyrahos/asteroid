@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Browser - Ad Blocker Test Page</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        .ad-container {
+            background: #fff3cd;
+            border: 2px dashed #ffc107;
+            padding: 20px;
+            margin: 16px 0;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .tracker-test { background: #f8d7da; border-color: #f5c6cb; }
+        .results { background: #d4edda; padding: 16px; border-radius: 8px; margin: 16px 0; }
+        .blocked { color: #28a745; font-weight: bold; }
+        .loaded { color: #dc3545; font-weight: bold; }
+        #stats { font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Content Blocker Test Page</h1>
+    <p>Tests Asteroid Browser's built-in ad and tracker blocking.</p>
+
+    <div class="results" id="results">
+        <h3>Blocking Results</h3>
+        <div id="stats">Running tests...</div>
+    </div>
+
+    <h2>Ad Network Tests</h2>
+
+    <!-- These simulate requests to known ad networks -->
+    <div class="ad-container" id="ad-google">
+        <p>Google Ads Test</p>
+        <img src="https://pagead2.googlesyndication.com/test-pixel.gif" width="1" height="1"
+             onerror="markBlocked('ad-google')" onload="markLoaded('ad-google')">
+    </div>
+
+    <div class="ad-container" id="ad-doubleclick">
+        <p>DoubleClick Test</p>
+        <img src="https://ad.doubleclick.net/test-pixel.gif" width="1" height="1"
+             onerror="markBlocked('ad-doubleclick')" onload="markLoaded('ad-doubleclick')">
+    </div>
+
+    <div class="ad-container" id="ad-facebook">
+        <p>Facebook Tracking Pixel Test</p>
+        <img src="https://www.facebook.com/tr?id=test&ev=PageView" width="1" height="1"
+             onerror="markBlocked('ad-facebook')" onload="markLoaded('ad-facebook')">
+    </div>
+
+    <h2>Tracker Tests</h2>
+
+    <div class="ad-container tracker-test" id="tracker-analytics">
+        <p>Google Analytics Test</p>
+        <script>
+            try {
+                const img = new Image();
+                img.src = 'https://www.google-analytics.com/collect?v=1&t=pageview';
+                img.onerror = () => markBlocked('tracker-analytics');
+                img.onload = () => markLoaded('tracker-analytics');
+                setTimeout(() => {
+                    if (!document.getElementById('tracker-analytics').dataset.tested) {
+                        markBlocked('tracker-analytics');
+                    }
+                }, 3000);
+            } catch (e) {
+                markBlocked('tracker-analytics');
+            }
+        </script>
+    </div>
+
+    <div class="ad-container tracker-test" id="tracker-hotjar">
+        <p>Hotjar Test</p>
+        <img src="https://static.hotjar.com/test-pixel.gif" width="1" height="1"
+             onerror="markBlocked('tracker-hotjar')" onload="markLoaded('tracker-hotjar')">
+    </div>
+
+    <div class="ad-container tracker-test" id="tracker-mixpanel">
+        <p>Mixpanel Test</p>
+        <img src="https://api.mixpanel.com/track?data=test" width="1" height="1"
+             onerror="markBlocked('tracker-mixpanel')" onload="markLoaded('tracker-mixpanel')">
+    </div>
+
+    <h2>Safe Content (Should NOT be blocked)</h2>
+
+    <div class="ad-container" id="safe-content" style="background: #d4edda; border-color: #28a745;">
+        <p>Regular Content Test</p>
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+             width="1" height="1"
+             onerror="markLoaded('safe-content')" onload="markSafe('safe-content')">
+    </div>
+
+    <script>
+        let blocked = 0;
+        let loaded = 0;
+        let total = 6;
+
+        function updateStats() {
+            document.getElementById('stats').innerHTML = `
+                Total tests: ${total}<br>
+                <span class="blocked">Blocked: ${blocked}</span><br>
+                <span class="loaded">Loaded: ${loaded}</span><br>
+                Block rate: ${((blocked / total) * 100).toFixed(0)}%
+            `;
+        }
+
+        function markBlocked(id) {
+            const el = document.getElementById(id);
+            if (el.dataset.tested) return;
+            el.dataset.tested = 'true';
+            el.innerHTML += '<br><span class="blocked">BLOCKED</span>';
+            blocked++;
+            updateStats();
+        }
+
+        function markLoaded(id) {
+            const el = document.getElementById(id);
+            if (el.dataset.tested) return;
+            el.dataset.tested = 'true';
+            el.innerHTML += '<br><span class="loaded">NOT BLOCKED</span>';
+            loaded++;
+            updateStats();
+        }
+
+        function markSafe(id) {
+            const el = document.getElementById(id);
+            if (el.dataset.tested) return;
+            el.dataset.tested = 'true';
+            el.innerHTML += '<br><span class="blocked">ALLOWED (correct)</span>';
+            updateStats();
+        }
+
+        // Timeout for tests that may not resolve
+        setTimeout(() => {
+            const tests = ['ad-google', 'ad-doubleclick', 'ad-facebook',
+                          'tracker-analytics', 'tracker-hotjar', 'tracker-mixpanel'];
+            tests.forEach(id => {
+                if (!document.getElementById(id).dataset.tested) {
+                    markBlocked(id);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+[Adblock Plus 2.0]
+! Title: Asteroid Browser Default Filters
+! Description: Built-in ad and tracker blocking filters
+! Homepage: https://github.com/asteroid-browser/asteroid-browser
+! Last modified: 2026-02-01
+! Version: 1.0
+
+! ===== Ad Networks =====
+||doubleclick.net^
+||googlesyndication.com^
+||googleadservices.com^
+||google-analytics.com^
+||googletagmanager.com^
+||amazon-adsystem.com^
+||ads.yahoo.com^
+||adnxs.com^
+||rubiconproject.com^
+||pubmatic.com^
+||openx.net^
+||casalemedia.com^
+||criteo.com^
+||outbrain.com^
+||taboola.com^
+||moatads.com^
+||serving-sys.com^
+||adsrvr.org^
+||bidswitch.net^
+||contextweb.com^
+||sharethrough.com^
+||33across.com^
+
+! ===== Trackers =====
+||scorecardresearch.com^
+||quantserve.com^
+||hotjar.com^
+||mouseflow.com^
+||fullstory.com^
+||crazyegg.com^
+||mixpanel.com^
+||amplitude.com^
+||segment.io^
+||segment.com^
+||optimizely.com^
+||newrelic.com^
+||nr-data.net^
+||sentry-cdn.com^
+||bugsnag.com^
+||rollbar.com^
+||loggly.com^
+
+! ===== Social Trackers =====
+||facebook.net/tr^
+||connect.facebook.net/en_US/fbevents.js
+||platform.twitter.com/widgets.js$third-party
+||platform.linkedin.com/badges/$third-party
+||snap.licdn.com/li.lms-analytics/$third-party
+
+! ===== Common Ad Paths =====
+*/ads/*$image,script,subdocument
+*/adserver/*$script
+*/advert/*$image,script
+*/banner/*$image
+*/popup/*$subdocument
+*/tracking/*$script,xmlhttprequest
+*/pixel.gif$image,third-party
+*/beacon/*$script,xmlhttprequest
+*/analytics/*$script,third-party
+
+! ===== Cookie Consent Annoyances =====
+||cookielaw.org^$third-party
+||cookiebot.com^$third-party
+||onetrust.com^$third-party
+||trustarc.com^$third-party
+||consensu.org^$third-party

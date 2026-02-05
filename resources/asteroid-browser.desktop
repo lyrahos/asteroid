@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Asteroid Browser
+GenericName=Web Browser
+Comment=Lightweight, fast browser for low-resource systems
+Exec=/usr/bin/asteroid-browser %U
+Icon=asteroid-browser
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=asteroid-browser
+Keywords=web;browser;internet;
+Actions=NewWindow;NewPrivateWindow;
+
+[Desktop Action NewWindow]
+Name=New Window
+Exec=/usr/bin/asteroid-browser --new-window
+
+[Desktop Action NewPrivateWindow]
+Name=New Private Window
+Exec=/usr/bin/asteroid-browser --private-window

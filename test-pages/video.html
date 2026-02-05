@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Browser - Video Test Page</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        video { width: 100%; max-width: 800px; border-radius: 8px; background: #000; }
+        .stats { background: #f0f8ff; padding: 16px; border-radius: 8px; margin: 16px 0; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0; }
+    </style>
+</head>
+<body>
+    <h1>Video Playback Test</h1>
+    <p>Tests HTML5 video playback, hardware acceleration, and performance.</p>
+
+    <video id="testVideo" controls preload="metadata">
+        <source src="https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_1MB.mp4" type="video/mp4">
+        <source src="https://test-videos.co.uk/vids/bigbuckbunny/webm/vp9/1080/Big_Buck_Bunny_1080_10s_1MB.webm" type="video/webm">
+        Your browser does not support HTML5 video.
+    </video>
+
+    <div class="stats" id="videoStats">
+        <h3>Video Statistics</h3>
+        <div class="stat-row"><span>Resolution:</span> <span id="resolution">-</span></div>
+        <div class="stat-row"><span>Codec:</span> <span id="codec">-</span></div>
+        <div class="stat-row"><span>Frames Decoded:</span> <span id="decoded">-</span></div>
+        <div class="stat-row"><span>Frames Dropped:</span> <span id="dropped">-</span></div>
+        <div class="stat-row"><span>Drop Rate:</span> <span id="dropRate">-</span></div>
+        <div class="stat-row"><span>Current Time:</span> <span id="currentTime">-</span></div>
+        <div class="stat-row"><span>Buffered:</span> <span id="buffered">-</span></div>
+        <div class="stat-row"><span>Hardware Accel:</span> <span id="hwAccel">Checking...</span></div>
+    </div>
+
+    <h2>Playback Controls</h2>
+    <div>
+        <button onclick="testVideo.playbackRate = 0.5">0.5x</button>
+        <button onclick="testVideo.playbackRate = 1.0">1x</button>
+        <button onclick="testVideo.playbackRate = 1.5">1.5x</button>
+        <button onclick="testVideo.playbackRate = 2.0">2x</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('testVideo');
+
+        video.addEventListener('loadedmetadata', () => {
+            document.getElementById('resolution').textContent =
+                `${video.videoWidth}x${video.videoHeight}`;
+        });
+
+        // Update stats periodically
+        setInterval(() => {
+            if (video.getVideoPlaybackQuality) {
+                const quality = video.getVideoPlaybackQuality();
+                const decoded = quality.totalVideoFrames;
+                const dropped = quality.droppedVideoFrames;
+
+                document.getElementById('decoded').textContent = decoded;
+                document.getElementById('dropped').textContent = dropped;
+                document.getElementById('dropRate').textContent =
+                    decoded > 0 ? ((dropped / decoded) * 100).toFixed(2) + '%' : '-';
+            }
+
+            document.getElementById('currentTime').textContent =
+                video.currentTime.toFixed(1) + 's';
+
+            if (video.buffered.length > 0) {
+                document.getElementById('buffered').textContent =
+                    video.buffered.end(video.buffered.length - 1).toFixed(1) + 's';
+            }
+        }, 500);
+
+        // Check for hardware acceleration hints
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                document.getElementById('hwAccel').textContent =
+                    renderer.includes('llvmpipe') || renderer.includes('Software')
+                        ? 'Software (no GPU)'
+                        : `Hardware (${renderer})`;
+            } else {
+                document.getElementById('hwAccel').textContent = 'Unknown';
+            }
+        } else {
+            document.getElementById('hwAccel').textContent = 'WebGL not available';
+        }
+    </script>
+</body>
+</html>

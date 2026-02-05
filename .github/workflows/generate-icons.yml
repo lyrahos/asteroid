@@ -1,0 +1,53 @@
+name: Generate Icons
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - main
+          - test
+          - dev
+        default: 'dev'
+
+jobs:
+  generate-icons:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.environment }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y inkscape imagemagick
+
+    - name: Generate PNG icons from SVG
+      run: |
+        chmod +x ./scripts/generate-icons.sh
+        ./scripts/generate-icons.sh
+
+    - name: Commit generated icons
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add resources/icons/
+        git diff --quiet && git diff --staged --quiet || git commit -m "chore: generate PNG icons for ${{ github.event.inputs.environment }}"
+
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.event.inputs.environment }}
+
+    - name: Upload icons as artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: asteroid-icons-${{ github.event.inputs.environment }}
+        path: resources/icons/
+        retention-days: 30

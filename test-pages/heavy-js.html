@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Browser - Heavy JS Test Page</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .counter { font-size: 48px; text-align: center; margin: 20px 0; color: #7DC6DA; }
+        .stats { background: #f0f8ff; padding: 16px; border-radius: 8px; }
+        .item { padding: 8px; border-bottom: 1px solid #eee; }
+        button { padding: 10px 20px; margin: 5px; background: #7DC6DA; border: none;
+                 border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #5a9fc8; }
+    </style>
+</head>
+<body>
+    <h1>Heavy JavaScript Test Page</h1>
+    <p>This page simulates a React-like app with frequent DOM updates and state management.</p>
+
+    <div class="counter" id="counter">0</div>
+
+    <div style="text-align: center">
+        <button onclick="startTest()">Start Stress Test</button>
+        <button onclick="stopTest()">Stop</button>
+        <button onclick="resetTest()">Reset</button>
+    </div>
+
+    <div class="stats" id="stats">
+        <h3>Performance Stats</h3>
+        <div>FPS: <span id="fps">-</span></div>
+        <div>DOM Nodes: <span id="nodes">-</span></div>
+        <div>Heap Used: <span id="heap">-</span></div>
+        <div>Updates/sec: <span id="updates">-</span></div>
+    </div>
+
+    <h2>Dynamic List</h2>
+    <div id="list"></div>
+
+    <script>
+        let running = false;
+        let frameCount = 0;
+        let updateCount = 0;
+        let lastFpsTime = performance.now();
+        let counter = 0;
+        let animationId = null;
+
+        function startTest() {
+            if (running) return;
+            running = true;
+            lastFpsTime = performance.now();
+            frameCount = 0;
+            updateCount = 0;
+            tick();
+        }
+
+        function stopTest() {
+            running = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        function resetTest() {
+            stopTest();
+            counter = 0;
+            document.getElementById('counter').textContent = '0';
+            document.getElementById('list').innerHTML = '';
+            document.getElementById('fps').textContent = '-';
+            document.getElementById('nodes').textContent = '-';
+            document.getElementById('heap').textContent = '-';
+            document.getElementById('updates').textContent = '-';
+        }
+
+        function tick() {
+            if (!running) return;
+
+            // Update counter
+            counter++;
+            document.getElementById('counter').textContent = counter;
+
+            // Add items to list (simulating virtual scroll data)
+            const list = document.getElementById('list');
+            if (list.children.length > 100) {
+                list.removeChild(list.firstChild);
+            }
+
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.textContent = `Item ${counter} - ${new Date().toISOString()} - ${Math.random().toFixed(6)}`;
+            list.appendChild(item);
+
+            // Simulate state calculations
+            for (let i = 0; i < 100; i++) {
+                Math.sqrt(Math.random() * 1000000);
+            }
+
+            updateCount++;
+            frameCount++;
+
+            // Update FPS every second
+            const now = performance.now();
+            if (now - lastFpsTime >= 1000) {
+                document.getElementById('fps').textContent = frameCount;
+                document.getElementById('updates').textContent = updateCount;
+                document.getElementById('nodes').textContent = document.querySelectorAll('*').length;
+
+                if (performance.memory) {
+                    document.getElementById('heap').textContent =
+                        (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB';
+                }
+
+                frameCount = 0;
+                updateCount = 0;
+                lastFpsTime = now;
+            }
+
+            animationId = requestAnimationFrame(tick);
+        }
+    </script>
+</body>
+</html>
