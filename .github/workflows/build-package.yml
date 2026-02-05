@@ -121,7 +121,7 @@ jobs:
     needs: setup
     if: needs.setup.outputs.build_rpm == 'true'
     runs-on: ubuntu-24.04
-    container: fedora:latest
+    container: fedora:41
 
     steps:
     - uses: actions/checkout@v4
@@ -181,6 +181,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y flatpak flatpak-builder inkscape
+
+    - name: Set up Flathub and GNOME SDK
+      run: |
+        sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        sudo flatpak install -y flathub org.gnome.Platform//46 org.gnome.Sdk//46
 
     - name: Generate icons if needed
       run: |
