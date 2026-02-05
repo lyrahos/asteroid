@@ -4,9 +4,20 @@
 
 set -e
 
-VERSION="${VERSION:-1.0.0}"
+FULL_VERSION="${VERSION:-1.0.0}"
 PACKAGE_NAME="asteroid-browser"
-RELEASE="1"
+
+# RPM Version cannot contain hyphens. Split into Version + Release.
+# e.g. "1.0.0-main-20260205" -> Version="1.0.0", Release="main.20260205"
+RPM_VERSION="${FULL_VERSION%%-*}"
+if [ "$RPM_VERSION" != "$FULL_VERSION" ]; then
+    RPM_RELEASE="${FULL_VERSION#*-}"
+    RPM_RELEASE="$(echo "$RPM_RELEASE" | tr '-' '.')"
+else
+    RPM_RELEASE="1"
+fi
+VERSION="$RPM_VERSION"
+RELEASE="$RPM_RELEASE"
 ARCH="x86_64"
 BUILD_DIR="build/rpm"
 DIST_DIR="dist"
