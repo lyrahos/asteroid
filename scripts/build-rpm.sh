@@ -20,7 +20,7 @@ mkdir -p "$DIST_DIR"
 
 # Build the binary
 echo "Building binary..."
-cargo build --release 2>/dev/null || echo "Note: Full build requires GTK4 dev libraries"
+cargo build --release
 
 # Create spec file
 cat > "$BUILD_DIR/SPECS/${PACKAGE_NAME}.spec" << EOF
@@ -83,10 +83,19 @@ done
 EOF
 
 # Build RPM
-rpmbuild --define "_topdir $(pwd)/$BUILD_DIR" -bb "$BUILD_DIR/SPECS/${PACKAGE_NAME}.spec" 2>/dev/null || \
-    echo "Note: rpmbuild not available, spec file created at ${BUILD_DIR}/SPECS/"
+if command -v rpmbuild &> /dev/null; then
+    rpmbuild --define "_topdir $(pwd)/$BUILD_DIR" -bb "$BUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
 
-# Copy RPM to dist
-find "$BUILD_DIR/RPMS" -name "*.rpm" -exec cp {} "$DIST_DIR/" \; 2>/dev/null || true
+    # Copy RPM to dist
+    find "$BUILD_DIR/RPMS" -name "*.rpm" -exec cp {} "$DIST_DIR/" \;
+
+    # Verify output exists
+    if ! ls "$DIST_DIR"/*.rpm 1>/dev/null 2>&1; then
+        echo "Error: RPM build completed but no .rpm file found in $DIST_DIR"
+        exit 1
+    fi
+else
+    echo "Note: rpmbuild not available, spec file created at ${BUILD_DIR}/SPECS/"
+fi
 
 echo "=== RPM package build complete ==="

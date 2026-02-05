@@ -60,12 +60,10 @@ EOF
 
 # Build Flatpak
 if command -v flatpak-builder &> /dev/null; then
-    flatpak-builder --force-clean "$BUILD_DIR/build" "$BUILD_DIR/${APP_ID}.yml" || \
-        echo "Note: Flatpak build requires org.gnome.Platform runtime"
+    flatpak-builder --force-clean "$BUILD_DIR/build" "$BUILD_DIR/${APP_ID}.yml"
 
     # Bundle into .flatpak file
-    flatpak build-bundle "$BUILD_DIR/repo" "$DIST_DIR/${APP_ID}-${VERSION}.flatpak" "$APP_ID" 2>/dev/null || \
-        echo "Note: Bundle creation requires flatpak-builder completion"
+    flatpak build-bundle "$BUILD_DIR/repo" "$DIST_DIR/${APP_ID}-${VERSION}.flatpak" "$APP_ID"
 else
     echo "Note: flatpak-builder not installed, manifest created at ${BUILD_DIR}/${APP_ID}.yml"
 fi

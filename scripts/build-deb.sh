@@ -23,7 +23,7 @@ mkdir -p "$DIST_DIR"
 
 # Build the binary
 echo "Building binary..."
-cargo build --release 2>/dev/null || echo "Note: Full build requires GTK4 dev libraries"
+cargo build --release
 
 # Copy binary (or create placeholder if build failed)
 if [ -f "target/release/asteroid-browser" ]; then
@@ -80,8 +80,11 @@ License: MIT
 EOF
 
 # Build the package
-dpkg-deb --build "$BUILD_DIR" "${DIST_DIR}/${PACKAGE_NAME}_${VERSION}_${ARCH}.deb" 2>/dev/null || \
+if command -v dpkg-deb &> /dev/null; then
+    dpkg-deb --build "$BUILD_DIR" "${DIST_DIR}/${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
+else
     echo "Note: dpkg-deb not available, package structure created in ${BUILD_DIR}"
+fi
 
 echo "=== DEB package build complete ==="
 echo "Package: ${DIST_DIR}/${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
