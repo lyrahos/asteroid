@@ -109,7 +109,7 @@ jobs:
         sha256sum *.deb > asteroid-browser-${{ github.event.inputs.environment }}.deb.sha256
 
     - name: Upload DEB package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: asteroid-browser-${{ github.event.inputs.environment }}-deb
         path: |
@@ -159,7 +159,7 @@ jobs:
         sha256sum *.rpm > asteroid-browser-${{ github.event.inputs.environment }}.rpm.sha256
 
     - name: Upload RPM package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: asteroid-browser-${{ github.event.inputs.environment }}-rpm
         path: |
@@ -195,7 +195,7 @@ jobs:
         VERSION=${{ needs.setup.outputs.version }} ./scripts/build-flatpak.sh
 
     - name: Upload Flatpak
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: asteroid-browser-${{ github.event.inputs.environment }}-flatpak
         path: dist/*.flatpak
