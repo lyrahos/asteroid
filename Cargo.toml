@@ -1,0 +1,51 @@
+[package]
+name = "asteroid-browser"
+version = "1.0.0"
+edition = "2021"
+description = "Lightweight, fast browser for low-resource Linux systems"
+license = "MIT"
+authors = ["Asteroid Browser Team"]
+homepage = "https://github.com/asteroid-browser/asteroid-browser"
+repository = "https://github.com/asteroid-browser/asteroid-browser"
+keywords = ["browser", "gtk4", "gecko", "lightweight"]
+categories = ["web-programming"]
+
+[features]
+default = ["gecko-engine"]
+gecko-engine = []
+servo-engine = []
+
+[dependencies]
+gtk4 = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+toml = "0.8"
+log = "0.4"
+env_logger = "0.10"
+dirs = "5.0"
+semver = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[[bin]]
+name = "asteroid-browser"
+path = "src/main.rs"
+
+[[bin]]
+name = "bench-memory"
+path = "src/bench/memory.rs"
+
+[[bin]]
+name = "bench-video"
+path = "src/bench/video.rs"
+
+[[bin]]
+name = "bench-pageload"
+path = "src/bench/pageload.rs"

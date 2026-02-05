@@ -1,0 +1,227 @@
+name: Build Installation Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - main
+          - test
+          - dev
+        default: 'dev'
+      package_type:
+        description: 'Package type to build'
+        required: true
+        type: choice
+        options:
+          - all
+          - deb
+          - rpm
+          - flatpak
+        default: 'all'
+      version:
+        description: 'Version string (e.g., 1.0.0-dev)'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+      build_deb: ${{ steps.set-packages.outputs.build_deb }}
+      build_rpm: ${{ steps.set-packages.outputs.build_rpm }}
+      build_flatpak: ${{ steps.set-packages.outputs.build_flatpak }}
+
+    steps:
+    - name: Set version
+      id: set-version
+      run: |
+        if [ -z "${{ github.event.inputs.version }}" ]; then
+          VERSION="1.0.0-${{ github.event.inputs.environment }}-$(date +%Y%m%d)"
+        else
+          VERSION="${{ github.event.inputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Determine packages to build
+      id: set-packages
+      run: |
+        if [ "${{ github.event.inputs.package_type }}" = "all" ]; then
+          echo "build_deb=true" >> $GITHUB_OUTPUT
+          echo "build_rpm=true" >> $GITHUB_OUTPUT
+          echo "build_flatpak=true" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.inputs.package_type }}" = "deb" ]; then
+          echo "build_deb=true" >> $GITHUB_OUTPUT
+          echo "build_rpm=false" >> $GITHUB_OUTPUT
+          echo "build_flatpak=false" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.inputs.package_type }}" = "rpm" ]; then
+          echo "build_deb=false" >> $GITHUB_OUTPUT
+          echo "build_rpm=true" >> $GITHUB_OUTPUT
+          echo "build_flatpak=false" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event.inputs.package_type }}" = "flatpak" ]; then
+          echo "build_deb=false" >> $GITHUB_OUTPUT
+          echo "build_rpm=false" >> $GITHUB_OUTPUT
+          echo "build_flatpak=true" >> $GITHUB_OUTPUT
+        fi
+
+  build-deb:
+    needs: setup
+    if: needs.setup.outputs.build_deb == 'true'
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.environment }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-4-dev libva-dev build-essential \
+          libglib2.0-dev libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev \
+          dpkg-dev inkscape
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+
+    - name: Generate icons if needed
+      run: |
+        if [ ! -d "resources/icons/16x16" ]; then
+          chmod +x ./scripts/generate-icons.sh
+          ./scripts/generate-icons.sh
+        fi
+
+    - name: Build DEB package
+      run: |
+        chmod +x ./scripts/build-deb.sh
+        VERSION=${{ needs.setup.outputs.version }} ./scripts/build-deb.sh
+
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum *.deb > asteroid-browser-${{ github.event.inputs.environment }}.deb.sha256
+
+    - name: Upload DEB package
+      uses: actions/upload-artifact@v3
+      with:
+        name: asteroid-browser-${{ github.event.inputs.environment }}-deb
+        path: |
+          dist/*.deb
+          dist/*.sha256
+        retention-days: 90
+
+  build-rpm:
+    needs: setup
+    if: needs.setup.outputs.build_rpm == 'true'
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.environment }}
+
+    - name: Install dependencies
+      run: |
+        dnf install -y gtk4-devel libva-devel gcc gcc-c++ \
+          glib2-devel cairo-devel pango-devel gdk-pixbuf2-devel \
+          rpm-build rpmdevtools inkscape
+
+    - name: Install Rust
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+        rustup default nightly
+
+    - name: Generate icons if needed
+      run: |
+        if [ ! -d "resources/icons/16x16" ]; then
+          chmod +x ./scripts/generate-icons.sh
+          ./scripts/generate-icons.sh
+        fi
+
+    - name: Build RPM package
+      run: |
+        source $HOME/.cargo/env
+        chmod +x ./scripts/build-rpm.sh
+        VERSION=${{ needs.setup.outputs.version }} ./scripts/build-rpm.sh
+
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum *.rpm > asteroid-browser-${{ github.event.inputs.environment }}.rpm.sha256
+
+    - name: Upload RPM package
+      uses: actions/upload-artifact@v3
+      with:
+        name: asteroid-browser-${{ github.event.inputs.environment }}-rpm
+        path: |
+          dist/*.rpm
+          dist/*.sha256
+        retention-days: 90
+
+  build-flatpak:
+    needs: setup
+    if: needs.setup.outputs.build_flatpak == 'true'
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.environment }}
+
+    - name: Install Flatpak
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y flatpak flatpak-builder inkscape
+
+    - name: Generate icons if needed
+      run: |
+        if [ ! -d "resources/icons/16x16" ]; then
+          chmod +x ./scripts/generate-icons.sh
+          ./scripts/generate-icons.sh
+        fi
+
+    - name: Build Flatpak
+      run: |
+        chmod +x ./scripts/build-flatpak.sh
+        VERSION=${{ needs.setup.outputs.version }} ./scripts/build-flatpak.sh
+
+    - name: Upload Flatpak
+      uses: actions/upload-artifact@v3
+      with:
+        name: asteroid-browser-${{ github.event.inputs.environment }}-flatpak
+        path: dist/*.flatpak
+        retention-days: 90
+
+  summary:
+    needs: [setup, build-deb, build-rpm, build-flatpak]
+    if: always()
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Build Summary
+      run: |
+        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Package Type:** ${{ github.event.inputs.package_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Built Packages:**" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ needs.setup.outputs.build_deb }}" = "true" ]; then
+          echo "- DEB package" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "${{ needs.setup.outputs.build_rpm }}" = "true" ]; then
+          echo "- RPM package" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "${{ needs.setup.outputs.build_flatpak }}" = "true" ]; then
+          echo "- Flatpak package" >> $GITHUB_STEP_SUMMARY
+        fi
