@@ -60,7 +60,7 @@ EOF
 
 # Build Flatpak
 if command -v flatpak-builder &> /dev/null; then
-    flatpak-builder --force-clean "$BUILD_DIR/build" "$BUILD_DIR/${APP_ID}.yml"
+    flatpak-builder --install-deps-from=flathub --force-clean --repo="$BUILD_DIR/repo" "$BUILD_DIR/build" "$BUILD_DIR/${APP_ID}.yml"
 
     # Bundle into .flatpak file
     flatpak build-bundle "$BUILD_DIR/repo" "$DIST_DIR/${APP_ID}-${VERSION}.flatpak" "$APP_ID"

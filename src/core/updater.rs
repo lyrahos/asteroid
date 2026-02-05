@@ -70,7 +70,7 @@ impl UpdateChecker {
     }
 
     /// Check for available updates by querying the GitHub releases API.
-    pub async fn check_for_updates(&self) -> Result<Option<UpdateInfo>, Box<dyn std::error::Error>> {
+    pub async fn check_for_updates(&self) -> Result<Option<UpdateInfo>, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!(
             "https://api.github.com/repos/{}/releases/latest",
             self.repo
@@ -125,7 +125,7 @@ impl UpdateChecker {
     pub async fn get_download_url(
         &self,
         version: &str,
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
         let tag = if version.starts_with('v') {
             version.to_string()
         } else {
@@ -157,14 +157,12 @@ impl UpdateChecker {
         use semver::Version;
 
         let current = Version::parse(&self.current_version).ok();
-        let remote = Version::parse(remote).ok();
+        let remote_ver = Version::parse(remote).ok();
 
-        match (current, remote) {
+        match (current, remote_ver) {
             (Some(c), Some(r)) => r > c,
-            _ => {
-                // Fallback to string comparison
-                remote.is_some()
-            }
+            (None, Some(_)) => true,
+            _ => false,
         }
     }
 

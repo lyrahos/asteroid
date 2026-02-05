@@ -8,7 +8,7 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Application, ApplicationWindow, Box as GtkBox, Button, Entry, HeaderBar,
+    Application, ApplicationWindow, Box as GtkBox, Button, Entry,
     Label, Orientation, Paned, ScrolledWindow, Separator,
 };
 

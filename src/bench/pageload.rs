@@ -39,9 +39,9 @@ fn main() {
     );
     println!("{}", "-".repeat(72));
 
-    for (name, test_url) in &test_pages {
+    for (name, _test_url) in &test_pages {
         // Simulate page load timing
-        let start = Instant::now();
+        let _start = Instant::now();
 
         // DNS resolution estimate
         let dns_time = std::time::Duration::from_millis(15);

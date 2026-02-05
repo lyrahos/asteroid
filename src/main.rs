@@ -12,10 +12,7 @@ mod ui;
 
 use crate::core::blocker::{ContentBlocker, DEFAULT_FILTERS};
 use crate::core::config::Config;
-use crate::core::engine::ViewId;
-use crate::core::memory::{
-    handle_memory_pressure, monitor_memory_pressure_loop, MemoryMonitorConfig, MemoryPressure,
-};
+use crate::core::memory::{monitor_memory_pressure_loop, MemoryMonitorConfig, MemoryPressure};
 use crate::core::tab::{SuspensionConfig, TabManager};
 use crate::core::updater;
 
@@ -144,5 +141,5 @@ fn main() {
         log::error!("Engine shutdown error: {}", e);
     }
 
-    log::info!("Asteroid Browser exited with code: {}", exit_code);
+    log::info!("Asteroid Browser exited with code: {:?}", exit_code);
 }
