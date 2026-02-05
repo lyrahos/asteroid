@@ -83,7 +83,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libgtk-4-dev libva-dev build-essential \
           libglib2.0-dev libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev \
-          dpkg-dev inkscape
+          libssl-dev pkg-config dpkg-dev inkscape
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -132,6 +132,7 @@ jobs:
       run: |
         dnf install -y gtk4-devel libva-devel gcc gcc-c++ \
           glib2-devel cairo-devel pango-devel gdk-pixbuf2-devel \
+          openssl-devel pkg-config perl-FindBin perl-File-Compare \
           rpm-build rpmdevtools inkscape
 
     - name: Install Rust
@@ -185,7 +186,8 @@ jobs:
     - name: Set up Flathub and GNOME SDK
       run: |
         sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-        sudo flatpak install -y flathub org.gnome.Platform//46 org.gnome.Sdk//46
+        sudo flatpak install -y flathub org.gnome.Platform//46 org.gnome.Sdk//46 \
+          org.freedesktop.Sdk.Extension.rust-stable//24.08
 
     - name: Generate icons if needed
       run: |

@@ -3,7 +3,7 @@
 //! Handles tab lifecycle including creation, suspension after inactivity,
 //! restoration, and memory-pressure-driven unloading.
 
-use crate::core::engine::{BrowserEngine, EngineResult, NavigationState, ViewId};
+use crate::core::engine::{BrowserEngine, EngineResult, ViewId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
