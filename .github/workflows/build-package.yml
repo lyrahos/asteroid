@@ -75,8 +75,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.inputs.environment }}
 
     - name: Install dependencies
       run: |
@@ -125,8 +123,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.inputs.environment }}
 
     - name: Install dependencies
       run: |
@@ -175,8 +171,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.inputs.environment }}
 
     - name: Install Flatpak
       run: |
