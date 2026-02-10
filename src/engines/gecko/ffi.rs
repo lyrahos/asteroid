@@ -4,6 +4,8 @@
 //! Gecko rendering engine via C/C++ bindings. In a full implementation,
 //! these would link to the actual Gecko/SpiderMonkey libraries.
 
+#![allow(dead_code)]
+
 /// Gecko runtime handle (opaque pointer in full implementation).
 #[derive(Debug)]
 pub struct GeckoRuntime {

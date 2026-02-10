@@ -3,6 +3,8 @@
 //! Provides a stable, engine-agnostic interface that allows swapping
 //! between rendering engines (Gecko, Servo) without changing the UI layer.
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;

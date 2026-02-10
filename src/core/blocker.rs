@@ -4,6 +4,8 @@
 //! (EasyList, EasyPrivacy format). Blocks requests before they reach
 //! the network, saving bandwidth, RAM, and CPU.
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 

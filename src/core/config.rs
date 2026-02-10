@@ -3,6 +3,8 @@
 //! Handles loading, saving, and providing access to user preferences.
 //! Config file location: ~/.config/asteroid-browser/config.toml
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

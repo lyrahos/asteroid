@@ -12,6 +12,8 @@
 //! - [ ] 95%+ Web Platform Tests pass rate
 //! - [ ] Production-ready stability
 
+#![allow(dead_code)]
+
 use crate::core::engine::{
     BrowserEngine, EngineError, EngineEvent, EngineResult, MemoryStats,
     NavigationState, TrimLevel, VideoDecoder, ViewId,

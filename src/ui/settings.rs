@@ -3,6 +3,8 @@
 //! Generates an HTML-based settings UI that is displayed
 //! within the browser itself (at asteroid://settings).
 
+#![allow(dead_code)]
+
 use crate::core::config::Config;
 
 /// Generate the settings HTML page.

@@ -4,6 +4,8 @@
 //! Supports tab switching, closing, drag-to-reorder, and visual
 //! indicators for suspended/loading tabs.
 
+#![allow(dead_code)]
+
 use crate::core::engine::ViewId;
 use crate::core::tab::{Tab, TabState};
 

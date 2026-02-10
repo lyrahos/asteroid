@@ -3,6 +3,8 @@
 //! Checks GitHub releases for new versions and notifies the user.
 //! Does not auto-install; requires user confirmation.
 
+#![allow(dead_code)]
+
 use serde::Deserialize;
 
 /// Represents a GitHub release.

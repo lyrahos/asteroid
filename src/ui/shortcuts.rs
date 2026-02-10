@@ -3,6 +3,8 @@
 //! Maps keyboard combinations to browser actions.
 //! Supports vim-style link hints when enabled.
 
+#![allow(dead_code)]
+
 /// Browser actions that can be triggered by keyboard shortcuts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BrowserAction {

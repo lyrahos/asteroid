@@ -9,6 +9,8 @@
 //! - Settings page
 //! - Status overlay
 
+#![allow(dead_code)]
+
 pub mod window;
 pub mod toolbar;
 pub mod tab_bar;

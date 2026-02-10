@@ -3,6 +3,8 @@
 //! Monitors system memory and triggers tab suspension and memory trimming
 //! when available memory drops below configurable thresholds.
 
+#![allow(dead_code)]
+
 use crate::core::engine::{BrowserEngine, TrimLevel};
 use crate::core::tab::TabManager;
 use std::time::Duration;

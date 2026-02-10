@@ -4,6 +4,8 @@
 //! Gecko is used initially for its mature web standards support, with a
 //! clean abstraction allowing future migration to Servo.
 
+#![allow(dead_code)]
+
 pub mod prefs;
 pub mod ffi;
 
