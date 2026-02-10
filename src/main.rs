@@ -15,9 +15,12 @@ use crate::core::config::Config;
 use crate::core::memory::{monitor_memory_pressure_loop, MemoryMonitorConfig, MemoryPressure};
 use crate::core::tab::{SuspensionConfig, TabManager};
 use crate::core::updater;
+use crate::ui::window::BrowserState;
 
 use gtk4::prelude::*;
 use gtk4::Application;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 const APP_ID: &str = "com.asteroid.browser";
@@ -85,11 +88,18 @@ fn main() {
         }
     }
 
+    // Wrap engine + tab manager in shared state for UI callbacks
+    let state = Rc::new(RefCell::new(BrowserState {
+        engine,
+        tab_manager,
+    }));
+
     // Start the GTK4 application
     let app = Application::builder().application_id(APP_ID).build();
 
+    let state_for_window = state.clone();
     app.connect_activate(move |app| {
-        let window = ui::window::build_window(app);
+        let window = ui::window::build_window(app, state_for_window.clone());
         ui::window::load_css();
         window.present();
     });
@@ -137,8 +147,10 @@ fn main() {
     let exit_code = app.run();
 
     // Cleanup
-    if let Err(e) = engine.shutdown() {
-        log::error!("Engine shutdown error: {}", e);
+    if let Ok(mut s) = state.try_borrow_mut() {
+        if let Err(e) = s.engine.shutdown() {
+            log::error!("Engine shutdown error: {}", e);
+        }
     }
 
     log::info!("Asteroid Browser exited with code: {:?}", exit_code);

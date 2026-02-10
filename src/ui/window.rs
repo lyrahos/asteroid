@@ -6,14 +6,38 @@
 //! - Web content area
 //! - Status overlay (bottom-left, appears on hover/activity)
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, Button, Entry,
     Label, Orientation, Paned, ScrolledWindow, Separator,
 };
 
-/// Build the main browser window.
-pub fn build_window(app: &Application) -> ApplicationWindow {
+use crate::core::engine::{BrowserEngine, EngineEvent};
+use crate::core::tab::TabManager;
+use crate::ui::toolbar::parse_address_input;
+
+/// Shared browser state accessible from UI callbacks.
+/// Uses Rc<RefCell<>> for zero-overhead single-threaded sharing.
+pub struct BrowserState {
+    pub engine: Box<dyn BrowserEngine>,
+    pub tab_manager: TabManager,
+}
+
+/// Toolbar widget handles needed for signal wiring.
+struct ToolbarWidgets {
+    container: GtkBox,
+    back_btn: Button,
+    forward_btn: Button,
+    reload_btn: Button,
+    address_bar: Entry,
+}
+
+/// Build the main browser window with navigation wiring.
+pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> ApplicationWindow {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Asteroid Browser")
@@ -21,29 +45,38 @@ pub fn build_window(app: &Application) -> ApplicationWindow {
         .default_height(800)
         .build();
 
-    // Main vertical layout
     let main_box = GtkBox::new(Orientation::Vertical, 0);
 
-    // Build toolbar
-    let toolbar = build_toolbar();
-    main_box.append(&toolbar);
+    // Toolbar
+    let tw = build_toolbar();
+    main_box.append(&tw.container);
 
-    // Horizontal layout for sidebar + content
+    // Sidebar + content
     let content_paned = Paned::new(Orientation::Horizontal);
 
-    // Tab sidebar (hidden by default, toggleable with F1)
     let sidebar = build_tab_sidebar();
     sidebar.set_visible(false);
     content_paned.set_start_child(Some(&sidebar));
     content_paned.set_position(200);
 
-    // Web content area placeholder
-    let content_area = build_content_area();
-    content_paned.set_end_child(Some(&content_area));
+    // Content area with label (placeholder until real web view)
+    let content_area = GtkBox::new(Orientation::Vertical, 0);
+    content_area.set_hexpand(true);
+    content_area.set_vexpand(true);
+    content_area.add_css_class("content-area");
 
+    let content_label = Label::new(Some("Asteroid Browser\n\nLightweight. Fast. Independent."));
+    content_label.set_vexpand(true);
+    content_label.set_hexpand(true);
+    content_label.set_valign(gtk4::Align::Center);
+    content_label.set_halign(gtk4::Align::Center);
+    content_label.add_css_class("welcome-text");
+    content_area.append(&content_label);
+
+    content_paned.set_end_child(Some(&content_area));
     main_box.append(&content_paned);
 
-    // Status bar overlay
+    // Status bar
     let status_label = Label::new(Some("Ready"));
     status_label.set_halign(gtk4::Align::Start);
     status_label.set_margin_start(8);
@@ -52,11 +85,143 @@ pub fn build_window(app: &Application) -> ApplicationWindow {
     main_box.append(&status_label);
 
     window.set_child(Some(&main_box));
+
+    // --- Wire signals ---
+
+    // Address bar: Enter key navigates
+    {
+        let state = state.clone();
+        let content = content_label.clone();
+        let status = status_label.clone();
+        let win = window.clone();
+        tw.address_bar.connect_activate(move |entry| {
+            let text = entry.text().to_string();
+            if text.trim().is_empty() {
+                return;
+            }
+            let url = parse_address_input(&text);
+            entry.set_text(&url);
+
+            let mut s = state.borrow_mut();
+            if let Some(view_id) = s.tab_manager.active_tab_id() {
+                match s.engine.load_url(view_id, &url) {
+                    Ok(()) => {
+                        content.set_text(&url);
+                        if let Ok(nav) = s.engine.get_navigation_state(view_id) {
+                            let title = if nav.title.is_empty() { &url } else { &nav.title };
+                            win.set_title(Some(&format!("{} - Asteroid Browser", title)));
+                        }
+                        status.set_text("Done");
+                    }
+                    Err(e) => {
+                        status.set_text(&format!("Error: {}", e));
+                    }
+                }
+            }
+        });
+    }
+
+    // Back button
+    {
+        let state = state.clone();
+        let addr = tw.address_bar.clone();
+        let status = status_label.clone();
+        tw.back_btn.connect_clicked(move |_| {
+            let mut s = state.borrow_mut();
+            if let Some(view_id) = s.tab_manager.active_tab_id() {
+                if let Err(e) = s.engine.go_back(view_id) {
+                    status.set_text(&format!("{}", e));
+                } else if let Ok(nav) = s.engine.get_navigation_state(view_id) {
+                    addr.set_text(&nav.url);
+                }
+            }
+        });
+    }
+
+    // Forward button
+    {
+        let state = state.clone();
+        let addr = tw.address_bar.clone();
+        let status = status_label.clone();
+        tw.forward_btn.connect_clicked(move |_| {
+            let mut s = state.borrow_mut();
+            if let Some(view_id) = s.tab_manager.active_tab_id() {
+                if let Err(e) = s.engine.go_forward(view_id) {
+                    status.set_text(&format!("{}", e));
+                } else if let Ok(nav) = s.engine.get_navigation_state(view_id) {
+                    addr.set_text(&nav.url);
+                }
+            }
+        });
+    }
+
+    // Reload button
+    {
+        let state = state.clone();
+        let status = status_label.clone();
+        tw.reload_btn.connect_clicked(move |_| {
+            let mut s = state.borrow_mut();
+            if let Some(view_id) = s.tab_manager.active_tab_id() {
+                status.set_text("Reloading...");
+                match s.engine.reload(view_id) {
+                    Ok(()) => status.set_text("Done"),
+                    Err(e) => status.set_text(&format!("{}", e)),
+                }
+            }
+        });
+    }
+
+    // Poll engine events (lightweight: just checks a Vec every 100ms)
+    {
+        let state = state.clone();
+        let addr = tw.address_bar.clone();
+        let status = status_label.clone();
+        let content = content_label;
+        let win = window.clone();
+        glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+            let mut s = state.borrow_mut();
+            for event in s.engine.poll_events() {
+                match event {
+                    EngineEvent::UrlChanged(_, ref url) => {
+                        addr.set_text(url);
+                        content.set_text(url);
+                    }
+                    EngineEvent::LoadStarted(_) => {
+                        status.set_text("Loading...");
+                    }
+                    EngineEvent::LoadProgress(_, p) => {
+                        if p < 1.0 {
+                            status.set_text(&format!("Loading {:.0}%", p * 100.0));
+                        }
+                    }
+                    EngineEvent::LoadFinished(_) => {
+                        status.set_text("Done");
+                    }
+                    EngineEvent::TitleChanged(_, ref title) => {
+                        win.set_title(Some(&format!("{} - Asteroid Browser", title)));
+                    }
+                    _ => {}
+                }
+            }
+            glib::ControlFlow::Continue
+        });
+    }
+
+    // Set initial URL from active tab
+    {
+        let s = state.borrow();
+        if let Some(view_id) = s.tab_manager.active_tab_id() {
+            if let Ok(nav) = s.engine.get_navigation_state(view_id) {
+                tw.address_bar.set_text(&nav.url);
+            }
+        }
+    }
+
     window
 }
 
-/// Build the navigation toolbar.
-fn build_toolbar() -> GtkBox {
+/// Build the navigation toolbar, returning widget handles.
+fn build_toolbar() -> ToolbarWidgets {
     let toolbar = GtkBox::new(Orientation::Horizontal, 4);
     toolbar.set_margin_start(4);
     toolbar.set_margin_end(4);
@@ -64,38 +229,39 @@ fn build_toolbar() -> GtkBox {
     toolbar.set_margin_bottom(4);
     toolbar.add_css_class("toolbar");
 
-    // Back button
-    let back_btn = Button::with_label("\u{2190}"); // ←
+    let back_btn = Button::with_label("\u{2190}"); // <-
     back_btn.set_tooltip_text(Some("Back (Alt+Left)"));
     back_btn.add_css_class("nav-button");
     toolbar.append(&back_btn);
 
-    // Forward button
-    let forward_btn = Button::with_label("\u{2192}"); // →
+    let forward_btn = Button::with_label("\u{2192}"); // ->
     forward_btn.set_tooltip_text(Some("Forward (Alt+Right)"));
     forward_btn.add_css_class("nav-button");
     toolbar.append(&forward_btn);
 
-    // Reload button
-    let reload_btn = Button::with_label("\u{27F3}"); // ⟳
+    let reload_btn = Button::with_label("\u{27F3}"); // reload symbol
     reload_btn.set_tooltip_text(Some("Reload (F5)"));
     reload_btn.add_css_class("nav-button");
     toolbar.append(&reload_btn);
 
-    // Address bar
     let address_bar = Entry::new();
     address_bar.set_placeholder_text(Some("Enter URL or search..."));
     address_bar.set_hexpand(true);
     address_bar.add_css_class("address-bar");
     toolbar.append(&address_bar);
 
-    // Menu button
-    let menu_btn = Button::with_label("\u{2630}"); // ☰
+    let menu_btn = Button::with_label("\u{2630}"); // hamburger menu
     menu_btn.set_tooltip_text(Some("Menu"));
     menu_btn.add_css_class("menu-button");
     toolbar.append(&menu_btn);
 
-    toolbar
+    ToolbarWidgets {
+        container: toolbar,
+        back_btn,
+        forward_btn,
+        reload_btn,
+        address_bar,
+    }
 }
 
 /// Build the vertical tab sidebar.
@@ -104,7 +270,6 @@ fn build_tab_sidebar() -> GtkBox {
     sidebar.set_width_request(200);
     sidebar.add_css_class("tab-sidebar");
 
-    // Sidebar header
     let header = Label::new(Some("Tabs"));
     header.add_css_class("sidebar-header");
     sidebar.append(&header);
@@ -112,14 +277,12 @@ fn build_tab_sidebar() -> GtkBox {
     let separator = Separator::new(Orientation::Horizontal);
     sidebar.append(&separator);
 
-    // Scrollable tab list
     let scrolled = ScrolledWindow::new();
     scrolled.set_vexpand(true);
 
     let tab_list = GtkBox::new(Orientation::Vertical, 1);
     tab_list.add_css_class("tab-list");
 
-    // New Tab button at bottom
     let new_tab_btn = Button::with_label("+ New Tab");
     new_tab_btn.set_tooltip_text(Some("New Tab (Ctrl+T)"));
     new_tab_btn.add_css_class("new-tab-button");
@@ -129,25 +292,6 @@ fn build_tab_sidebar() -> GtkBox {
     sidebar.append(&new_tab_btn);
 
     sidebar
-}
-
-/// Build the main content area.
-fn build_content_area() -> GtkBox {
-    let content = GtkBox::new(Orientation::Vertical, 0);
-    content.set_hexpand(true);
-    content.set_vexpand(true);
-    content.add_css_class("content-area");
-
-    // Placeholder for web view
-    let placeholder = Label::new(Some("Asteroid Browser\n\nLightweight. Fast. Independent."));
-    placeholder.set_vexpand(true);
-    placeholder.set_hexpand(true);
-    placeholder.set_valign(gtk4::Align::Center);
-    placeholder.set_halign(gtk4::Align::Center);
-    placeholder.add_css_class("welcome-text");
-
-    content.append(&placeholder);
-    content
 }
 
 /// Apply CSS styles to the application.
