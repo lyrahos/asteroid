@@ -3,6 +3,8 @@
 //! Defines optimized preference values for memory efficiency,
 //! performance, and privacy.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 /// Get memory optimization preferences.

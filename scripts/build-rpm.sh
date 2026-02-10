@@ -21,6 +21,7 @@ RELEASE="$RPM_RELEASE"
 ARCH="x86_64"
 BUILD_DIR="build/rpm"
 DIST_DIR="dist"
+PROJECT_ROOT="$(pwd)"
 
 echo "=== Building RPM package v${VERSION} ==="
 
@@ -63,8 +64,8 @@ mkdir -p %{buildroot}/usr/share/asteroid-browser
 mkdir -p %{buildroot}/usr/share/icons/hicolor
 
 # Install binary
-if [ -f "../../target/release/asteroid-browser" ]; then
-    install -m 755 ../../target/release/asteroid-browser %{buildroot}/usr/bin/
+if [ -f "${PROJECT_ROOT}/target/release/asteroid-browser" ]; then
+    install -m 755 ${PROJECT_ROOT}/target/release/asteroid-browser %{buildroot}/usr/bin/
 else
     echo '#!/bin/bash' > %{buildroot}/usr/bin/asteroid-browser
     echo 'echo "Asteroid Browser v${VERSION}"' >> %{buildroot}/usr/bin/asteroid-browser
@@ -72,14 +73,14 @@ else
 fi
 
 # Install resources
-cp -r ../../resources/* %{buildroot}/usr/share/asteroid-browser/
+cp -r ${PROJECT_ROOT}/resources/* %{buildroot}/usr/share/asteroid-browser/
 
 # Install icons
 for size in 16 32 48 128 256; do
     icon_dir="%{buildroot}/usr/share/icons/hicolor/\${size}x\${size}/apps"
     mkdir -p "\$icon_dir"
-    if [ -f "../../resources/icons/\${size}x\${size}/asteroid-browser.png" ]; then
-        cp "../../resources/icons/\${size}x\${size}/asteroid-browser.png" "\$icon_dir/"
+    if [ -f "${PROJECT_ROOT}/resources/icons/\${size}x\${size}/asteroid-browser.png" ]; then
+        cp "${PROJECT_ROOT}/resources/icons/\${size}x\${size}/asteroid-browser.png" "\$icon_dir/"
     fi
 done
 

@@ -5,6 +5,8 @@
 //! - Combined address/search bar (omnibox)
 //! - Menu button
 
+#![allow(dead_code)]
+
 /// Toolbar action events.
 #[derive(Debug, Clone)]
 pub enum ToolbarAction {
