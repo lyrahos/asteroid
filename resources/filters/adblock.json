@@ -13,8 +13,6 @@
 {"trigger":{"url-filter":"googlesyndication\\.com"},"action":{"type":"block"}},
 {"trigger":{"url-filter":"google\\.com/ads"},"action":{"type":"block"}},
 {"trigger":{"url-filter":"google\\.com/pagead"},"action":{"type":"block"}},
-{"trigger":{"url-filter":"imasdk\\.googleapis\\.com"},"action":{"type":"block"}},
-
 {"trigger":{"url-filter":"connect\\.facebook\\.net"},"action":{"type":"block"}},
 {"trigger":{"url-filter":"facebook\\.com/tr"},"action":{"type":"block"}},
 {"trigger":{"url-filter":"pixel\\.facebook\\.com"},"action":{"type":"block"}},

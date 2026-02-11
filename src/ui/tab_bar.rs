@@ -63,23 +63,6 @@ impl TabEntry {
     }
 }
 
-/// Tab bar action events.
-#[derive(Debug, Clone)]
-pub enum TabBarAction {
-    /// Switch to a tab
-    SwitchTab(ViewId),
-    /// Close a tab
-    CloseTab(ViewId),
-    /// Create a new tab
-    NewTab,
-    /// Pin/unpin a tab
-    TogglePin(ViewId),
-    /// Move tab to new position
-    MoveTab(ViewId, usize),
-    /// Toggle sidebar visibility
-    ToggleSidebar,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
