@@ -79,10 +79,7 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     settings.set_enable_page_cache(true);
     // DNS prefetching: resolve DNS for links before user clicks them
     settings.set_enable_dns_prefetching(true);
-    // Let WebKit pick GPU vs CPU rendering per-frame (avoids slow fallback)
-    settings.set_hardware_acceleration_policy(
-        webkit6::HardwareAccelerationPolicy::OnDemand,
-    );
+    // Hardware acceleration defaults to OnDemand (WebKit picks fastest path)
     // Disable features we don't need (saves RAM without hurting speed)
     settings.set_enable_offline_web_application_cache(false);
     settings.set_enable_html5_database(false);
