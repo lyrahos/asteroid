@@ -330,7 +330,8 @@ fn configure_webview_settings(webview: &WebView) {
     let settings: webkit6::Settings = webkit6::prelude::WebViewExt::settings(webview).unwrap();
     settings.set_enable_page_cache(true);
     settings.set_enable_dns_prefetching(true);
-    // Hardware acceleration defaults to OnDemand (WebKit picks fastest path)
+    // Force GPU compositing on — offloads rendering work from CPU to GPU
+    settings.set_hardware_acceleration_policy(webkit6::HardwareAccelerationPolicy::Always);
     settings.set_enable_offline_web_application_cache(false);
     settings.set_enable_html5_database(false);
     settings.set_enable_smooth_scrolling(false);

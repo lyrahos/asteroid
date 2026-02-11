@@ -41,6 +41,18 @@ fn main() {
         }
     }
 
+    // Force GStreamer to prefer VA-API hardware video decoders.
+    // Without this, GStreamer defaults to software decode (avdec_h264 via FFmpeg)
+    // which uses ~15% CPU vs ~5% with hardware decode. WebKitGTK delegates all
+    // media playback to GStreamer, and VA-API decoders ship with rank NONE so
+    // they're never auto-selected unless we boost their rank.
+    if std::env::var("GST_PLUGIN_FEATURE_RANK").is_err() {
+        std::env::set_var(
+            "GST_PLUGIN_FEATURE_RANK",
+            "vah264dec:MAX,vah265dec:MAX,vavp9dec:MAX,vaav1dec:MAX",
+        );
+    }
+
     // Set process name so system monitor shows "Asteroid Browser" in Applications
     gtk4::glib::set_prgname(Some("asteroid-browser"));
     gtk4::glib::set_application_name("Asteroid Browser");

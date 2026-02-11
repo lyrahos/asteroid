@@ -46,7 +46,7 @@ URL:            https://github.com/asteroid-browser/asteroid-browser
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gtk4-devel, libva-devel, webkitgtk6.0-devel, gcc, gcc-c++
-Requires:       gtk4, libva, webkitgtk6.0, glib-networking
+Requires:       gtk4, libva, webkitgtk6.0, glib-networking, gstreamer1-plugins-bad-free, gstreamer1-plugins-good
 
 %description
 Asteroid Browser is a minimal-RAM, high-performance browser that uses

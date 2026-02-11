@@ -57,8 +57,8 @@ Version: ${VERSION}
 Section: web
 Priority: optional
 Architecture: ${ARCH}
-Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2, libwebkitgtk-6.0-4, glib-networking
-Recommends: libva-drm2, libva-x11-2
+Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2, libwebkitgtk-6.0-4, glib-networking, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-good
+Recommends: libva-drm2, libva-x11-2, gstreamer1.0-vaapi
 Maintainer: Asteroid Browser Team <team@asteroid-browser.org>
 Description: Lightweight, fast web browser for Linux
  Asteroid Browser is a minimal-RAM, high-performance browser
