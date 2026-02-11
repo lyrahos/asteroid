@@ -68,6 +68,47 @@ Description: Lightweight, fast web browser for Linux
 Homepage: https://github.com/asteroid-browser/asteroid-browser
 EOF
 
+# Create postinst script — checks for optional deps after install
+cat > "$BUILD_DIR/DEBIAN/postinst" << 'POSTINST'
+#!/bin/bash
+# Post-install: check for optional hardware acceleration packages
+
+check_and_suggest() {
+    local pkg="$1"
+    local desc="$2"
+    if ! dpkg -s "$pkg" &>/dev/null 2>&1; then
+        MISSING+=("$pkg  ($desc)")
+        MISSING_PKGS+=("$pkg")
+    fi
+}
+
+MISSING=()
+MISSING_PKGS=()
+
+check_and_suggest "gstreamer1.0-vaapi" "hardware video decode (VA-API)"
+check_and_suggest "libva-drm2" "VA-API DRM backend"
+check_and_suggest "va-driver-all" "VA-API drivers for Intel/AMD GPUs"
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo ""
+    echo "============================================="
+    echo "  Asteroid Browser - Optional Packages"
+    echo "============================================="
+    echo ""
+    echo "For better video performance, the following"
+    echo "optional packages are recommended:"
+    echo ""
+    for item in "${MISSING[@]}"; do
+        echo "  - $item"
+    done
+    echo ""
+    echo "Install them with:"
+    echo "  sudo apt install ${MISSING_PKGS[*]}"
+    echo ""
+fi
+POSTINST
+chmod 755 "$BUILD_DIR/DEBIAN/postinst"
+
 # Create copyright file
 cat > "$BUILD_DIR/usr/share/doc/asteroid-browser/copyright" << EOF
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/

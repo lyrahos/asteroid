@@ -83,6 +83,27 @@ for size in 16 32 48 128 256; do
     fi
 done
 
+%post
+# Check for optional hardware acceleration packages
+MISSING=""
+rpm -q gstreamer1-vaapi &>/dev/null 2>&1 || MISSING="\$MISSING gstreamer1-vaapi"
+rpm -q mesa-va-drivers &>/dev/null 2>&1 || MISSING="\$MISSING mesa-va-drivers"
+
+if [ -n "\$MISSING" ]; then
+    echo ""
+    echo "============================================="
+    echo "  Asteroid Browser - Optional Packages"
+    echo "============================================="
+    echo ""
+    echo "For better video performance, install:"
+    for pkg in \$MISSING; do
+        echo "  - \$pkg"
+    done
+    echo ""
+    echo "Run: sudo dnf install\$MISSING"
+    echo ""
+fi
+
 %files
 /usr/bin/asteroid-browser
 /usr/share/asteroid-browser/
