@@ -338,6 +338,10 @@ fn configure_webview_settings(webview: &WebView) {
     // media_stream + webrtc needed for YouTube, Twitch, and other video sites
     settings.set_enable_media_stream(true);
     settings.set_enable_webrtc(true);
+    // Prevent autoplay video/audio — biggest CPU saver on modern sites.
+    // Users can still play media by clicking; this just stops background
+    // hero videos, auto-playing ads, and embedded players from spinning CPU.
+    settings.set_media_playback_requires_user_gesture(true);
 }
 
 /// Build the navigation toolbar, returning widget handles.
@@ -549,9 +553,12 @@ window {
 "#;
 
 /// Set up WebKitGTK content filter to block ads/trackers at the network level.
-/// Loads comprehensive rules from resources/filters/adblock.json (updatable
-/// without recompile). Falls back to a minimal embedded list if file is missing.
+/// On the first tab, compiles filter rules and saves to the store.
+/// On subsequent tabs, loads the already-compiled filter (skips recompilation).
 fn setup_content_filter(webview: &WebView) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static FILTER_COMPILED: AtomicBool = AtomicBool::new(false);
+
     let filter_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
         .join("asteroid-browser")
@@ -562,22 +569,36 @@ fn setup_content_filter(webview: &WebView) {
         &filter_dir.to_string_lossy(),
     );
 
-    // Try loading comprehensive filter list from file (user-updatable)
-    let rules_json = load_filter_rules();
-    let rules_bytes = gtk4::glib::Bytes::from_owned(rules_json.into_bytes());
-
     let ucm = webview.user_content_manager().unwrap();
 
-    store.save(
-        "asteroid-adblock",
-        &rules_bytes,
-        None::<&gtk4::gio::Cancellable>,
-        move |result| {
-            if let Ok(filter) = result {
-                ucm.add_filter(&filter);
-            }
-        },
-    );
+    if FILTER_COMPILED.load(Ordering::Relaxed) {
+        // Filter already compiled — just load from store (fast path)
+        store.load(
+            "asteroid-adblock",
+            None::<&gtk4::gio::Cancellable>,
+            move |result| {
+                if let Ok(filter) = result {
+                    ucm.add_filter(&filter);
+                }
+            },
+        );
+    } else {
+        // First tab — compile filter rules and save to store
+        let rules_json = load_filter_rules();
+        let rules_bytes = gtk4::glib::Bytes::from_owned(rules_json.into_bytes());
+
+        store.save(
+            "asteroid-adblock",
+            &rules_bytes,
+            None::<&gtk4::gio::Cancellable>,
+            move |result| {
+                if let Ok(filter) = result {
+                    ucm.add_filter(&filter);
+                    FILTER_COMPILED.store(true, Ordering::Relaxed);
+                }
+            },
+        );
+    }
 }
 
 /// Load filter rules from file, checking multiple paths.

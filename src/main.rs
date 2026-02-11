@@ -12,9 +12,7 @@ mod ui;
 
 use crate::core::blocker::{ContentBlocker, DEFAULT_FILTERS};
 use crate::core::config::Config;
-use crate::core::memory::{monitor_memory_pressure_loop, MemoryMonitorConfig, MemoryPressure};
 use crate::core::tab::{SuspensionConfig, TabManager};
-use crate::core::updater;
 use crate::ui::window::BrowserState;
 
 use gtk4::prelude::*;
@@ -124,45 +122,6 @@ fn main() {
         ui::window::load_css();
         window.present();
     });
-
-    // Set up lightweight async runtime for background tasks
-    // Single-threaded: avoids extra threads competing with WebKit for CPU
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build();
-
-    if let Ok(rt) = rt {
-        rt.spawn(async move {
-            // Start memory pressure monitor
-            let mem_config = MemoryMonitorConfig::default();
-            let (pressure_tx, mut pressure_rx) =
-                tokio::sync::mpsc::channel::<MemoryPressure>(10);
-
-            tokio::spawn(monitor_memory_pressure_loop(mem_config, pressure_tx));
-
-            // Start update checker
-            if config.general.auto_update_check {
-                let (update_tx, mut update_rx) =
-                    tokio::sync::mpsc::channel(1);
-                updater::start_update_checker(update_tx);
-
-                tokio::spawn(async move {
-                    while let Some(info) = update_rx.recv().await {
-                        log::info!(
-                            "Update available: v{} - {}",
-                            info.version,
-                            info.release_url
-                        );
-                    }
-                });
-            }
-
-            // Handle memory pressure events
-            while let Some(pressure) = pressure_rx.recv().await {
-                log::warn!("Memory pressure: {:?}", pressure);
-            }
-        });
-    }
 
     // Run the GTK application
     let exit_code = app.run();
