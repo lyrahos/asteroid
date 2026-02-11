@@ -88,6 +88,9 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     settings.set_enable_media_stream(false);
     settings.set_enable_webrtc(false);
 
+    // Wire content blocker - blocks ads/trackers at network level before download
+    setup_content_filter(&webview);
+
     content_area.append(&webview);
 
     content_paned.set_end_child(Some(&content_area));
@@ -409,3 +412,74 @@ window {
     opacity: 0.6;
 }
 "#;
+
+/// Set up WebKitGTK content filter to block ads/trackers at the network level.
+/// Loads comprehensive rules from resources/filters/adblock.json (updatable
+/// without recompile). Falls back to a minimal embedded list if file is missing.
+fn setup_content_filter(webview: &WebView) {
+    let filter_dir = dirs::cache_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join("asteroid-browser")
+        .join("content-filters");
+    let _ = std::fs::create_dir_all(&filter_dir);
+
+    let store = webkit6::UserContentFilterStore::new(
+        &filter_dir.to_string_lossy(),
+    );
+
+    // Try loading comprehensive filter list from file (user-updatable)
+    let rules_json = load_filter_rules();
+    let rules_bytes = gtk4::glib::Bytes::from_owned(rules_json.into_bytes());
+
+    let ucm = webview.user_content_manager().unwrap();
+
+    store.save(
+        "asteroid-adblock",
+        &rules_bytes,
+        None::<&gtk4::gio::Cancellable>,
+        move |result| {
+            if let Ok(filter) = result {
+                ucm.add_filter(&filter);
+            }
+        },
+    );
+}
+
+/// Load filter rules from file, checking multiple paths.
+/// Returns the JSON string, falling back to a minimal embedded list.
+fn load_filter_rules() -> String {
+    // Paths to check, in order of priority:
+    // 1. User config override
+    // 2. Installed system path (RPM/DEB)
+    // 3. Source tree (development)
+    let paths = [
+        dirs::config_dir()
+            .map(|d| d.join("asteroid-browser").join("filters").join("adblock.json")),
+        Some(std::path::PathBuf::from("/usr/share/asteroid-browser/filters/adblock.json")),
+        Some(std::path::PathBuf::from("resources/filters/adblock.json")),
+    ];
+
+    for path in paths.iter().flatten() {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            if !content.trim().is_empty() {
+                return content;
+            }
+        }
+    }
+
+    // Minimal fallback if no file found
+    FALLBACK_FILTER_JSON.to_string()
+}
+
+/// Minimal fallback filter rules if the full adblock.json is not found.
+const FALLBACK_FILTER_JSON: &str = r#"[
+{"trigger":{"url-filter":"google-analytics\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"googletagmanager\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"doubleclick\\.net"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"googlesyndication\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"connect\\.facebook\\.net"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"adnxs\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"criteo\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"outbrain\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"taboola\\.com"},"action":{"type":"block"}}
+]"#;
