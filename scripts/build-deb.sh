@@ -57,14 +57,14 @@ Version: ${VERSION}
 Section: web
 Priority: optional
 Architecture: ${ARCH}
-Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2, libwebkitgtk-6.0-4
+Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2, libwebkitgtk-6.0-4, glib-networking
 Recommends: libva-drm2, libva-x11-2
 Maintainer: Asteroid Browser Team <team@asteroid-browser.org>
 Description: Lightweight, fast web browser for Linux
  Asteroid Browser is a minimal-RAM, high-performance browser
- that uses the Gecko engine with a clean abstraction layer.
- Features include built-in ad/tracker blocking, hardware
- video acceleration, and aggressive memory management.
+ that uses WebKitGTK for rendering. Features include built-in
+ ad/tracker blocking, hardware video acceleration, and
+ aggressive memory management.
 Homepage: https://github.com/asteroid-browser/asteroid-browser
 EOF
 

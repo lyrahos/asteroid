@@ -73,15 +73,20 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     webview.set_vexpand(true);
     webview.set_hexpand(true);
 
-    // Configure WebView for minimal RAM usage
+    // Configure WebView for speed + reasonable RAM
     let settings: webkit6::Settings = webkit6::prelude::WebViewExt::settings(&webview).unwrap();
-    settings.set_enable_page_cache(false);
+    // Page cache: keeps rendered pages in memory for instant back/forward
+    settings.set_enable_page_cache(true);
+    // DNS prefetching: resolve DNS for links before user clicks them
+    settings.set_enable_dns_prefetching(true);
+    // Let WebKit pick GPU vs CPU rendering per-frame (avoids slow fallback)
+    settings.set_hardware_acceleration_policy(
+        webkit6::HardwareAccelerationPolicy::OnDemand,
+    );
+    // Disable features we don't need (saves RAM without hurting speed)
     settings.set_enable_offline_web_application_cache(false);
     settings.set_enable_html5_database(false);
     settings.set_enable_smooth_scrolling(false);
-    settings.set_hardware_acceleration_policy(
-        webkit6::HardwareAccelerationPolicy::Always,
-    );
     settings.set_enable_developer_extras(false);
     settings.set_enable_media_stream(false);
     settings.set_enable_webrtc(false);

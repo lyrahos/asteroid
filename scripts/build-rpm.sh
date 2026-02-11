@@ -46,13 +46,12 @@ URL:            https://github.com/asteroid-browser/asteroid-browser
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gtk4-devel, libva-devel, webkitgtk6.0-devel, gcc, gcc-c++
-Requires:       gtk4, libva, webkitgtk6.0
+Requires:       gtk4, libva, webkitgtk6.0, glib-networking
 
 %description
 Asteroid Browser is a minimal-RAM, high-performance browser that uses
-the Gecko engine with a clean abstraction layer. Features include
-built-in ad/tracker blocking, hardware video acceleration, and
-aggressive memory management.
+WebKitGTK for rendering. Features include built-in ad/tracker blocking,
+hardware video acceleration, and aggressive memory management.
 
 %prep
 # No prep needed for pre-built binary

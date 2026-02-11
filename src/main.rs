@@ -104,9 +104,9 @@ fn main() {
         window.present();
     });
 
-    // Set up async runtime for background tasks
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
+    // Set up lightweight async runtime for background tasks
+    // Single-threaded: avoids extra threads competing with WebKit for CPU
+    let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build();
 
