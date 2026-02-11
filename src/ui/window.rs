@@ -55,6 +55,11 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     let tw = build_toolbar();
     main_box.append(&tw.container);
 
+    // Show dep notice bar if optional packages are missing (first launch only)
+    if let Some(notice) = build_dep_notice() {
+        main_box.append(&notice);
+    }
+
     // Notebook for tabbed browsing
     let notebook = Notebook::new();
     notebook.set_scrollable(true);
@@ -551,7 +556,136 @@ window {
     padding: 8px;
     color: #7DC6DA;
 }
+
+/* Dependency notice bar */
+.dep-notice {
+    background-color: #1a3a5c;
+    border-bottom: 1px solid #0f3460;
+    padding: 6px 12px;
+}
+
+.dep-notice label {
+    color: #e0e0e0;
+    font-size: 13px;
+}
+
+.dep-notice-close {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    background-color: transparent;
+    color: #888;
+    border: none;
+    font-size: 14px;
+}
+
+.dep-notice-close:hover {
+    color: #ff4444;
+}
 "#;
+
+/// Check if VA-API hardware video decode is available on this system.
+/// Looks for VA-API driver directories and the GStreamer VA plugin.
+fn check_hw_video_available() -> bool {
+    // Check for VA-API drivers (Intel/AMD GPU decode support)
+    let vaapi_present = [
+        "/usr/lib/x86_64-linux-gnu/dri",
+        "/usr/lib64/dri",
+        "/usr/lib/dri",
+    ]
+    .iter()
+    .any(|p| {
+        std::path::Path::new(p)
+            .read_dir()
+            .map(|mut d| d.any(|e| {
+                e.map(|e| e.file_name().to_string_lossy().contains("_drv_video"))
+                    .unwrap_or(false)
+            }))
+            .unwrap_or(false)
+    });
+
+    // Check for GStreamer VA plugin (provides vah264dec etc.)
+    let gst_va_present = [
+        "/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstva.so",
+        "/usr/lib64/gstreamer-1.0/libgstva.so",
+        "/usr/lib/gstreamer-1.0/libgstva.so",
+    ]
+    .iter()
+    .any(|p| std::path::Path::new(p).exists());
+
+    vaapi_present && gst_va_present
+}
+
+/// Detect the install command for the current distro.
+fn detect_install_hint() -> &'static str {
+    if std::path::Path::new("/usr/bin/apt").exists() {
+        "sudo apt install gstreamer1.0-vaapi va-driver-all"
+    } else if std::path::Path::new("/usr/bin/dnf").exists() {
+        "sudo dnf install gstreamer1-vaapi mesa-va-drivers"
+    } else if std::path::Path::new("/usr/bin/pacman").exists() {
+        "sudo pacman -S gstreamer-vaapi libva-mesa-driver"
+    } else if std::path::Path::new("/usr/bin/zypper").exists() {
+        "sudo zypper install gstreamer-plugins-vaapi libva-glx2"
+    } else {
+        "Install: gstreamer-vaapi and VA-API drivers for your GPU"
+    }
+}
+
+/// Check if the user has already dismissed the dependency notice.
+fn dep_notice_dismissed() -> bool {
+    dirs::config_dir()
+        .map(|d| d.join("asteroid-browser").join(".dep-notice-dismissed"))
+        .map(|p| p.exists())
+        .unwrap_or(false)
+}
+
+/// Save a flag so the dependency notice is not shown again.
+fn dismiss_dep_notice() {
+    if let Some(dir) = dirs::config_dir() {
+        let path = dir.join("asteroid-browser");
+        let _ = std::fs::create_dir_all(&path);
+        let _ = std::fs::write(path.join(".dep-notice-dismissed"), "1");
+    }
+}
+
+/// Build an in-app notification bar if optional hardware acceleration
+/// packages are missing. Returns None if everything is fine or if the
+/// user has already dismissed the notice.
+fn build_dep_notice() -> Option<GtkBox> {
+    // Don't show if already dismissed or if hardware decode is available
+    if dep_notice_dismissed() || check_hw_video_available() {
+        return None;
+    }
+
+    let bar = GtkBox::new(Orientation::Horizontal, 8);
+    bar.add_css_class("dep-notice");
+
+    let hint = detect_install_hint();
+    let msg = format!(
+        "For better video performance, install hardware video acceleration:  {}",
+        hint
+    );
+    let label = Label::new(Some(&msg));
+    label.set_hexpand(true);
+    label.set_halign(gtk4::Align::Start);
+    label.set_selectable(true);
+
+    let close_btn = Button::with_label("\u{00D7}");
+    close_btn.add_css_class("dep-notice-close");
+    close_btn.set_tooltip_text(Some("Dismiss"));
+
+    bar.append(&label);
+    bar.append(&close_btn);
+
+    // Dismiss: hide the bar and save the flag
+    let bar_ref = bar.clone();
+    close_btn.connect_clicked(move |_| {
+        bar_ref.set_visible(false);
+        dismiss_dep_notice();
+    });
+
+    Some(bar)
+}
 
 /// Set up WebKitGTK content filter to block ads/trackers at the network level.
 /// On the first tab, compiles filter rules and saves to the store.
