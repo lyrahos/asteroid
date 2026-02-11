@@ -57,7 +57,7 @@ Version: ${VERSION}
 Section: web
 Priority: optional
 Architecture: ${ARCH}
-Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2
+Depends: libgtk-4-1 (>= 4.0), libglib2.0-0, libva2, libwebkitgtk-6.0-4
 Recommends: libva-drm2, libva-x11-2
 Maintainer: Asteroid Browser Team <team@asteroid-browser.org>
 Description: Lightweight, fast web browser for Linux

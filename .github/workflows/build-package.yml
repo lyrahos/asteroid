@@ -81,7 +81,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-4-dev libva-dev build-essential \
+        sudo apt-get install -y libgtk-4-dev libva-dev libwebkitgtk-6.0-dev build-essential \
           libglib2.0-dev libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev \
           libssl-dev pkg-config dpkg-dev inkscape
 
@@ -130,7 +130,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        dnf install -y gtk4-devel libva-devel gcc gcc-c++ \
+        dnf install -y gtk4-devel libva-devel webkitgtk6.0-devel gcc gcc-c++ \
           glib2-devel cairo-devel pango-devel gdk-pixbuf2-devel \
           openssl-devel pkg-config perl-FindBin perl-File-Compare \
           rpm-build rpmdevtools inkscape

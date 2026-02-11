@@ -3,8 +3,8 @@
 //! A minimal-RAM, high-performance browser for Linux that maintains
 //! independence from corporate control while supporting modern web standards.
 //!
-//! Uses Gecko (Firefox engine) initially with a clean abstraction layer
-//! enabling future migration to Servo or other engines.
+//! Uses WebKitGTK (community-maintained) for rendering with a clean
+//! abstraction layer enabling future engine migration.
 
 mod core;
 mod engines;
