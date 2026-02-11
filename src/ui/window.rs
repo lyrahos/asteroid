@@ -88,6 +88,9 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     settings.set_enable_media_stream(false);
     settings.set_enable_webrtc(false);
 
+    // Wire content blocker - blocks ads/trackers at network level before download
+    setup_content_filter(&webview);
+
     content_area.append(&webview);
 
     content_paned.set_end_child(Some(&content_area));
@@ -409,3 +412,59 @@ window {
     opacity: 0.6;
 }
 "#;
+
+/// Set up WebKitGTK content filter to block ads/trackers at the network level.
+/// Uses the same JSON format as Safari content blockers. Requests are blocked
+/// before download, saving both CPU and bandwidth.
+fn setup_content_filter(webview: &WebView) {
+    let filter_dir = dirs::cache_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join("asteroid-browser")
+        .join("content-filters");
+    let _ = std::fs::create_dir_all(&filter_dir);
+
+    let store = webkit6::UserContentFilterStore::new(
+        &filter_dir.to_string_lossy(),
+    );
+
+    let ucm = webview.user_content_manager().unwrap();
+
+    store.save(
+        "asteroid-adblock",
+        &gtk4::glib::Bytes::from_static(CONTENT_FILTER_JSON.as_bytes()),
+        None::<&gtk4::gio::Cancellable>,
+        move |result| {
+            if let Ok(filter) = result {
+                ucm.add_filter(&filter);
+            }
+        },
+    );
+}
+
+/// Content filter rules in WebKit JSON format.
+/// Blocks common ad networks and trackers at the network level.
+const CONTENT_FILTER_JSON: &str = r#"[
+{"trigger":{"url-filter":"google-analytics\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"googletagmanager\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"googlesyndication\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"doubleclick\\.net"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"googleadservices\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"adservice\\.google"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"pagead2\\.googlesyndication"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"connect\\.facebook\\.net"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"facebook\\.com/tr"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"pixel\\.facebook"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"amazon-adsystem\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"ads\\.yahoo\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"adnxs\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"scorecardresearch\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"quantserve\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"outbrain\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"taboola\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"bat\\.bing\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"hotjar\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"criteo\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"mixpanel\\.com"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"segment\\.io"},"action":{"type":"block"}},
+{"trigger":{"url-filter":"optimizely\\.com"},"action":{"type":"block"}}
+]"#;

@@ -26,6 +26,10 @@ use std::time::Duration;
 const APP_ID: &str = "com.asteroid.browser";
 
 fn main() {
+    // Set process name so system monitor shows "Asteroid Browser" in Applications
+    gtk4::glib::set_prgname(Some("asteroid-browser"));
+    gtk4::glib::set_application_name("Asteroid Browser");
+
     // Initialize logging
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_timestamp_millis()
