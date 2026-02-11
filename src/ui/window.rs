@@ -85,8 +85,9 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     settings.set_enable_html5_database(false);
     settings.set_enable_smooth_scrolling(false);
     settings.set_enable_developer_extras(false);
-    settings.set_enable_media_stream(false);
-    settings.set_enable_webrtc(false);
+    // media_stream + webrtc needed for YouTube, Twitch, and other video sites
+    settings.set_enable_media_stream(true);
+    settings.set_enable_webrtc(true);
 
     // Wire content blocker - blocks ads/trackers at network level before download
     setup_content_filter(&webview);
@@ -179,6 +180,24 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
             } else {
                 status.set_text("Done");
             }
+        });
+    }
+
+    // Recover from WebProcess crashes instead of freezing
+    {
+        let wv = webview.clone();
+        let status = status_label.clone();
+        webview.connect_web_process_terminated(move |_wv, reason| {
+            log::error!("WebProcess terminated: {:?}", reason);
+            status.set_text("Page crashed — reloading...");
+            // Reload the page after a brief delay to let WebKit clean up
+            let wv_reload = wv.clone();
+            gtk4::glib::timeout_add_local_once(
+                std::time::Duration::from_millis(500),
+                move || {
+                    wv_reload.reload();
+                },
+            );
         });
     }
 

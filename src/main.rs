@@ -26,6 +26,23 @@ use std::time::Duration;
 const APP_ID: &str = "com.asteroid.browser";
 
 fn main() {
+    // Raise file descriptor limit — WebKit subprocesses open many fds for
+    // media-heavy sites (Twitch, YouTube). Default soft limit (1024) is too low.
+    #[cfg(unix)]
+    unsafe {
+        let mut rlim = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut rlim) == 0 {
+            let target = rlim.rlim_max.min(65536);
+            if rlim.rlim_cur < target {
+                rlim.rlim_cur = target;
+                libc::setrlimit(libc::RLIMIT_NOFILE, &rlim);
+            }
+        }
+    }
+
     // Set process name so system monitor shows "Asteroid Browser" in Applications
     gtk4::glib::set_prgname(Some("asteroid-browser"));
     gtk4::glib::set_application_name("Asteroid Browser");

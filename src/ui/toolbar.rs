@@ -7,23 +7,6 @@
 
 #![allow(dead_code)]
 
-/// Toolbar action events.
-#[derive(Debug, Clone)]
-pub enum ToolbarAction {
-    /// Navigate back
-    GoBack,
-    /// Navigate forward
-    GoForward,
-    /// Reload current page
-    Reload,
-    /// Navigate to URL or perform search
-    Navigate(String),
-    /// Open menu
-    OpenMenu,
-    /// Stop loading
-    Stop,
-}
-
 /// Determine if input is a URL or search query.
 pub fn parse_address_input(input: &str) -> String {
     let trimmed = input.trim();
