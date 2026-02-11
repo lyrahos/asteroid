@@ -3,20 +3,24 @@
 //! Creates the primary GTK4 application window with minimal chrome:
 //! - Navigation toolbar (back, forward, reload, address bar, menu)
 //! - Optional vertical tab sidebar
-//! - Web content area
+//! - WebKitGTK web content area
 //! - Status overlay (bottom-left, appears on hover/activity)
+
+#![allow(dead_code)]
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, Button, Entry,
     Label, Orientation, Paned, ScrolledWindow, Separator,
 };
 
-use crate::core::engine::{BrowserEngine, EngineEvent};
+use webkit6::prelude::*;
+use webkit6::WebView;
+
+use crate::core::engine::BrowserEngine;
 use crate::core::tab::TabManager;
 use crate::ui::toolbar::parse_address_input;
 
@@ -36,7 +40,7 @@ struct ToolbarWidgets {
     address_bar: Entry,
 }
 
-/// Build the main browser window with navigation wiring.
+/// Build the main browser window with WebKitGTK rendering.
 pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> ApplicationWindow {
     let window = ApplicationWindow::builder()
         .application(app)
@@ -59,19 +63,45 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     content_paned.set_start_child(Some(&sidebar));
     content_paned.set_position(200);
 
-    // Content area with label (placeholder until real web view)
+    // WebView content area (WebKitGTK renders actual web pages)
     let content_area = GtkBox::new(Orientation::Vertical, 0);
     content_area.set_hexpand(true);
     content_area.set_vexpand(true);
     content_area.add_css_class("content-area");
 
-    let content_label = Label::new(Some("Asteroid Browser\n\nLightweight. Fast. Independent."));
-    content_label.set_vexpand(true);
-    content_label.set_hexpand(true);
-    content_label.set_valign(gtk4::Align::Center);
-    content_label.set_halign(gtk4::Align::Center);
-    content_label.add_css_class("welcome-text");
-    content_area.append(&content_label);
+    let webview = WebView::new();
+    webview.set_vexpand(true);
+    webview.set_hexpand(true);
+
+    // Configure WebView for minimal RAM usage
+    if let Some(settings) = webview.settings() {
+        // Disable page cache - significant RAM savings per tab
+        settings.set_enable_page_cache(false);
+        // Disable offline app cache
+        settings.set_enable_offline_web_application_cache(false);
+        // Disable WebSQL database (saves RAM)
+        settings.set_enable_html5_database(false);
+        // Disable smooth scrolling (saves CPU/RAM)
+        settings.set_enable_smooth_scrolling(false);
+        // Use GPU acceleration to offload from RAM
+        settings.set_hardware_acceleration_policy(
+            webkit6::HardwareAccelerationPolicy::Always,
+        );
+        // Disable developer tools in production (saves RAM)
+        settings.set_enable_developer_extras(false);
+        // Disable media stream (webcam/mic) unless needed
+        settings.set_enable_media_stream(false);
+        // Disable WebRTC to save resources
+        settings.set_enable_webrtc(false);
+    }
+
+    // Set memory pressure relief on the web context
+    if let Some(context) = webview.web_context() {
+        // Limit web process count - single process saves RAM
+        context.set_web_process_count_limit(1);
+    }
+
+    content_area.append(&webview);
 
     content_paned.set_end_child(Some(&content_area));
     main_box.append(&content_paned);
@@ -88,12 +118,9 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
 
     // --- Wire signals ---
 
-    // Address bar: Enter key navigates
+    // Address bar: Enter key loads URL in WebView
     {
-        let state = state.clone();
-        let content = content_label.clone();
-        let status = status_label.clone();
-        let win = window.clone();
+        let wv = webview.clone();
         tw.address_bar.connect_activate(move |entry| {
             let text = entry.text().to_string();
             if text.trim().is_empty() {
@@ -101,118 +128,79 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
             }
             let url = parse_address_input(&text);
             entry.set_text(&url);
-
-            let mut s = state.borrow_mut();
-            if let Some(view_id) = s.tab_manager.active_tab_id() {
-                match s.engine.load_url(view_id, &url) {
-                    Ok(()) => {
-                        content.set_text(&url);
-                        if let Ok(nav) = s.engine.get_navigation_state(view_id) {
-                            let title = if nav.title.is_empty() { &url } else { &nav.title };
-                            win.set_title(Some(&format!("{} - Asteroid Browser", title)));
-                        }
-                        status.set_text("Done");
-                    }
-                    Err(e) => {
-                        status.set_text(&format!("Error: {}", e));
-                    }
-                }
-            }
+            wv.load_uri(&url);
         });
     }
 
     // Back button
     {
-        let state = state.clone();
-        let addr = tw.address_bar.clone();
-        let status = status_label.clone();
+        let wv = webview.clone();
         tw.back_btn.connect_clicked(move |_| {
-            let mut s = state.borrow_mut();
-            if let Some(view_id) = s.tab_manager.active_tab_id() {
-                if let Err(e) = s.engine.go_back(view_id) {
-                    status.set_text(&format!("{}", e));
-                } else if let Ok(nav) = s.engine.get_navigation_state(view_id) {
-                    addr.set_text(&nav.url);
-                }
-            }
+            wv.go_back();
         });
     }
 
     // Forward button
     {
-        let state = state.clone();
-        let addr = tw.address_bar.clone();
-        let status = status_label.clone();
+        let wv = webview.clone();
         tw.forward_btn.connect_clicked(move |_| {
-            let mut s = state.borrow_mut();
-            if let Some(view_id) = s.tab_manager.active_tab_id() {
-                if let Err(e) = s.engine.go_forward(view_id) {
-                    status.set_text(&format!("{}", e));
-                } else if let Ok(nav) = s.engine.get_navigation_state(view_id) {
-                    addr.set_text(&nav.url);
-                }
-            }
+            wv.go_forward();
         });
     }
 
     // Reload button
     {
-        let state = state.clone();
-        let status = status_label.clone();
+        let wv = webview.clone();
         tw.reload_btn.connect_clicked(move |_| {
-            let mut s = state.borrow_mut();
-            if let Some(view_id) = s.tab_manager.active_tab_id() {
-                status.set_text("Reloading...");
-                match s.engine.reload(view_id) {
-                    Ok(()) => status.set_text("Done"),
-                    Err(e) => status.set_text(&format!("{}", e)),
-                }
-            }
+            wv.reload();
         });
     }
 
-    // Poll engine events (lightweight: just checks a Vec every 100ms)
+    // WebView URI changed -> update address bar
     {
-        let state = state.clone();
         let addr = tw.address_bar.clone();
-        let status = status_label.clone();
-        let content = content_label;
-        let win = window.clone();
-        glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
-            let mut s = state.borrow_mut();
-            for event in s.engine.poll_events() {
-                match event {
-                    EngineEvent::UrlChanged(_, ref url) => {
-                        addr.set_text(url);
-                        content.set_text(url);
-                    }
-                    EngineEvent::LoadStarted(_) => {
-                        status.set_text("Loading...");
-                    }
-                    EngineEvent::LoadProgress(_, p) => {
-                        if p < 1.0 {
-                            status.set_text(&format!("Loading {:.0}%", p * 100.0));
-                        }
-                    }
-                    EngineEvent::LoadFinished(_) => {
-                        status.set_text("Done");
-                    }
-                    EngineEvent::TitleChanged(_, ref title) => {
-                        win.set_title(Some(&format!("{} - Asteroid Browser", title)));
-                    }
-                    _ => {}
-                }
+        webview.connect_notify_local(Some("uri"), move |wv, _| {
+            if let Some(uri) = wv.uri() {
+                addr.set_text(&uri);
             }
-            glib::ControlFlow::Continue
         });
     }
 
-    // Set initial URL from active tab
+    // WebView title changed -> update window title
+    {
+        let win = window.clone();
+        webview.connect_notify_local(Some("title"), move |wv, _| {
+            if let Some(title) = wv.title() {
+                let t = title.to_string();
+                if !t.is_empty() {
+                    win.set_title(Some(&format!("{} - Asteroid Browser", t)));
+                }
+            }
+        });
+    }
+
+    // WebView load progress -> update status bar
+    {
+        let status = status_label.clone();
+        webview.connect_notify_local(Some("estimated-load-progress"), move |wv, _| {
+            let progress = wv.estimated_load_progress();
+            if progress < 1.0 {
+                status.set_text(&format!("Loading {:.0}%", progress * 100.0));
+            } else {
+                status.set_text("Done");
+            }
+        });
+    }
+
+    // Load initial page from active tab state
     {
         let s = state.borrow();
         if let Some(view_id) = s.tab_manager.active_tab_id() {
             if let Ok(nav) = s.engine.get_navigation_state(view_id) {
-                tw.address_bar.set_text(&nav.url);
+                if !nav.url.is_empty() && nav.url != "about:blank" {
+                    webview.load_uri(&nav.url);
+                    tw.address_bar.set_text(&nav.url);
+                }
             }
         }
     }
@@ -397,11 +385,6 @@ window {
 
 .content-area {
     background-color: #ffffff;
-}
-
-.welcome-text {
-    font-size: 24px;
-    color: #666666;
 }
 
 .status-overlay {

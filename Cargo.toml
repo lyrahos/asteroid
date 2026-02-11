@@ -7,7 +7,7 @@ license = "MIT"
 authors = ["Asteroid Browser Team"]
 homepage = "https://github.com/asteroid-browser/asteroid-browser"
 repository = "https://github.com/asteroid-browser/asteroid-browser"
-keywords = ["browser", "gtk4", "gecko", "lightweight"]
+keywords = ["browser", "gtk4", "webkit", "lightweight"]
 categories = ["web-programming"]
 
 [features]
@@ -17,6 +17,7 @@ servo-engine = []
 
 [dependencies]
 gtk4 = "0.8"
+webkit6 = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }

@@ -26,8 +26,8 @@ This specification describes a complete, production-ready lightweight web browse
 
 **Key Constraints:**
 - RAM usage MUST meet targets: <150MB idle, <300MB for 5 tabs
-- Use Gecko engine (NOT Chromium, NOT WebKit)
-- Clean abstraction layer to enable future Servo migration
+- Use WebKitGTK (community-maintained, corporate-independent) for web rendering
+- Clean abstraction layer to enable future engine migration
 - Minimal UI - keyboard-first, no bloat
 - Built-in ad/tracker blocking
 - Hardware video acceleration mandatory
@@ -46,7 +46,7 @@ Start with the directory structure in the "Engine Abstraction Details" section a
 
 ## Executive Summary
 
-A minimal-RAM, high-performance browser for Linux that maintains independence from corporate control while supporting modern web standards. Uses Gecko (Firefox engine) initially with a clean abstraction layer enabling future migration to Servo or other engines.
+A minimal-RAM, high-performance browser for Linux that maintains independence from corporate control while supporting modern web standards. Uses WebKitGTK (community-maintained GTK port of WebKit) for rendering with a clean abstraction layer enabling future engine migration.
 
 ---
 
@@ -522,41 +522,32 @@ trait BrowserEngine {
 - `ServoEngine` - Future implementation (stubbed initially)
 - Test mocks for development
 
-#### 3. Engine Layer - Gecko Implementation
+#### 3. Engine Layer - WebKitGTK Implementation
 
-**Base:** GeckoView or embedded Gecko (NOT full Firefox)
+**Base:** WebKitGTK 6.0 via `webkit6` Rust crate
 
-**Optimizations:**
+**Why WebKitGTK:**
+- Community-maintained (GNOME + Igalia), not corporate-controlled
+- Native GTK4 integration - no bridging overhead
+- Full modern web standards support (HTML5, CSS3, ES2023+)
+- Built-in hardware acceleration (VA-API, GPU compositing)
+- Used by GNOME Web (Epiphany) - proven in production
 
-1. **Compile-time removals:**
-   - Disable Pocket integration
-   - Remove Firefox Sync
-   - Strip telemetry/crash reporting
-   - Remove Firefox Accounts
-   - Disable built-in extensions (Pocket, Screenshots, etc.)
-   - Remove Safe Browsing lookups (can use local filters)
+**Memory Optimizations (via WebKit Settings):**
+```rust
+// Configure WebView for minimal RAM usage
+let settings = webview.settings().unwrap();
+settings.set_enable_javascript_markup(true);
+settings.set_enable_smooth_scrolling(false);     // Save CPU
+settings.set_enable_page_cache(false);            // Save RAM
+settings.set_hardware_acceleration_policy(
+    webkit6::HardwareAccelerationPolicy::Always   // Offload to GPU
+);
 
-2. **Custom preferences (`prefs.js`):**
-```javascript
-// Memory optimizations
-user_pref("browser.sessionhistory.max_total_viewers", 0);
-user_pref("browser.sessionstore.interval", 60000);
-user_pref("browser.cache.memory.capacity", 51200); // 50MB max
-user_pref("media.memory_cache_max_size", 32768); // 32MB
-user_pref("browser.tabs.unloadOnLowMemory", true);
-
-// Aggressive tab discarding
-user_pref("browser.tabs.min_inactive_duration_before_unload", 300000); // 5min
-
-// Disable animations/transitions
-user_pref("browser.tabs.animate", false);
-user_pref("browser.fullscreen.animate", false);
-
-// Video optimizations
-user_pref("media.hardware-video-decoding.enabled", true);
-user_pref("media.ffmpeg.vaapi.enabled", true); // Linux hardware decode
-user_pref("layers.acceleration.force-enabled", true);
-user_pref("gfx.webrender.all", true); // GPU rendering
+// Disable features that consume extra RAM
+settings.set_enable_offline_web_application_cache(false);
+settings.set_enable_html5_local_storage(true);    // Minimal storage only
+settings.set_enable_html5_database(false);        // Save RAM
 ```
 
 ---
@@ -767,19 +758,18 @@ F11          - Fullscreen
 - Good Wayland support
 - Mature, stable
 
-**Engine:** Gecko (Mozilla SpiderMonkey + Gecko layout)
-- Use `mozjs` crate for SpiderMonkey bindings
-- GeckoView embedder API (Android uses this, adaptable)
-- OR use servo/components parts if easier
+**Engine:** WebKitGTK 6.0 (community-maintained, GNOME ecosystem)
+- Use `webkit6` crate for Rust bindings (compatible with `gtk4 = "0.8"`)
+- WebView widget handles rendering, JavaScript, networking natively
+- Corporate-independent: maintained by GNOME community + Igalia cooperative
 
-**Build System:** Cargo + Meson (for Gecko integration)
+**Build System:** Cargo
 
 **Dependencies:**
 ```toml
 [dependencies]
 gtk4 = "0.8"
-webkit2gtk = false  # Explicitly not using WebKit
-mozjs = "0.15"      # SpiderMonkey bindings
+webkit6 = "0.3"     # WebKitGTK 6.0 bindings for GTK4
 serde = "1.0"
 tokio = "1.0"       # Async runtime
 reqwest = "0.11"    # HTTP client (supplementary)
@@ -1604,13 +1594,13 @@ pub fn start_update_checker() {
 **Runtime dependencies:**
 - GTK4
 - GLib
+- WebKitGTK 6.0 (`libwebkitgtk-6.0-4` on Debian/Ubuntu, `webkitgtk6.0` on Fedora)
 - libva (for video acceleration)
-- FFmpeg (if not statically linked)
 
 **Build dependencies:**
 - Rust toolchain (1.75+)
-- Gecko build deps (if building from source)
-- Meson, Ninja
+- WebKitGTK 6.0 dev (`libwebkitgtk-6.0-dev` on Debian/Ubuntu, `webkitgtk6.0-devel` on Fedora)
+- GTK4 dev libraries
 
 ### Desktop Integration
 

@@ -45,8 +45,8 @@ License:        MIT
 URL:            https://github.com/asteroid-browser/asteroid-browser
 Source0:        %{name}-%{version}.tar.gz
 
-BuildRequires:  gtk4-devel, libva-devel, gcc, gcc-c++
-Requires:       gtk4, libva
+BuildRequires:  gtk4-devel, libva-devel, webkitgtk6.0-devel, gcc, gcc-c++
+Requires:       gtk4, libva, webkitgtk6.0
 
 %description
 Asteroid Browser is a minimal-RAM, high-performance browser that uses
