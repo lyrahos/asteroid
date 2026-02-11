@@ -74,32 +74,17 @@ pub fn build_window(app: &Application, state: Rc<RefCell<BrowserState>>) -> Appl
     webview.set_hexpand(true);
 
     // Configure WebView for minimal RAM usage
-    if let Some(settings) = webview.settings() {
-        // Disable page cache - significant RAM savings per tab
-        settings.set_enable_page_cache(false);
-        // Disable offline app cache
-        settings.set_enable_offline_web_application_cache(false);
-        // Disable WebSQL database (saves RAM)
-        settings.set_enable_html5_database(false);
-        // Disable smooth scrolling (saves CPU/RAM)
-        settings.set_enable_smooth_scrolling(false);
-        // Use GPU acceleration to offload from RAM
-        settings.set_hardware_acceleration_policy(
-            webkit6::HardwareAccelerationPolicy::Always,
-        );
-        // Disable developer tools in production (saves RAM)
-        settings.set_enable_developer_extras(false);
-        // Disable media stream (webcam/mic) unless needed
-        settings.set_enable_media_stream(false);
-        // Disable WebRTC to save resources
-        settings.set_enable_webrtc(false);
-    }
-
-    // Set memory pressure relief on the web context
-    if let Some(context) = webview.web_context() {
-        // Limit web process count - single process saves RAM
-        context.set_web_process_count_limit(1);
-    }
+    let settings: webkit6::Settings = webkit6::prelude::WebViewExt::settings(&webview).unwrap();
+    settings.set_enable_page_cache(false);
+    settings.set_enable_offline_web_application_cache(false);
+    settings.set_enable_html5_database(false);
+    settings.set_enable_smooth_scrolling(false);
+    settings.set_hardware_acceleration_policy(
+        webkit6::HardwareAccelerationPolicy::Always,
+    );
+    settings.set_enable_developer_extras(false);
+    settings.set_enable_media_stream(false);
+    settings.set_enable_webrtc(false);
 
     content_area.append(&webview);
 
